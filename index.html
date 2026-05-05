@@ -6,7 +6,6 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { display: flex; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; }
-
 #sidebar {
   width: 210px; min-width: 210px;
   background: #161b22;
@@ -626,7 +625,7 @@ window.addEventListener('resize', resize);
 resize();
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
-document.getElementById('btn-export').addEventListener('click', () => {
+document.getElementById('btn-export').addEventListener('click', async () => {  // add async here
   if (placed.length === 0) { setStatus('Nothing to export yet'); return; }
 
   const sorted = [...placed].sort((a, b) => a.ly - b.ly || a.gz - b.gz || a.gx - b.gx);
@@ -688,13 +687,47 @@ document.getElementById('btn-export').addEventListener('click', () => {
     })
   };
 
-  const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = `lego_build_${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  setStatus(`Exported ${placed.length} block(s) in ${maxLy} layer(s)`);
+  setStatus('Sending to robot...');
+
+  try {
+    const GITHUB_TOKEN = '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';
+    const REPO         = 'joemattson/duplo-robot-builder';
+    const FILE_PATH    = 'assembly.json';
+    const API_URL      = `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`;
+
+    // Get current SHA if file already exists (GitHub requires this to overwrite)
+    let sha = undefined;
+    const existing = await fetch(API_URL, {
+      headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+    });
+    if (existing.ok) {
+      const data = await existing.json();
+      sha = data.sha;
+    }
+
+    // Push assembly.json to repo
+    const response = await fetch(API_URL, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: `New assembly plan ${new Date().toISOString()}`,
+        content: btoa(JSON.stringify(plan, null, 2)),
+        ...(sha && { sha })
+      })
+    });
+
+    if (response.ok) {
+      setStatus(`✓ Sent ${placed.length} block(s) to robot!`);
+    } else {
+      setStatus('Export failed — check token permissions');
+    }
+
+  } catch (err) {
+    setStatus(`Error: ${err.message}`);
+  }
 });
 
 // ── RESET ─────────────────────────────────────────────────────────────────────
