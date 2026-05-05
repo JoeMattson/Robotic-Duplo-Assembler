@@ -625,7 +625,7 @@ window.addEventListener('resize', resize);
 resize();
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
-document.getElementById('btn-export').addEventListener('click', async () => {  // add async here
+document.getElementById('btn-export').addEventListener('click', async () => {
   if (placed.length === 0) { setStatus('Nothing to export yet'); return; }
 
   const sorted = [...placed].sort((a, b) => a.ly - b.ly || a.gz - b.gz || a.gx - b.gx);
@@ -690,39 +690,18 @@ document.getElementById('btn-export').addEventListener('click', async () => {  /
   setStatus('Sending to robot...');
 
   try {
-    const GITHUB_TOKEN = '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';
-    const REPO         = 'joemattson/duplo_instruction_builder';
-    const FILE_PATH    = 'assembly.json';
-    const API_URL      = `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`;
+    const NPOINT_ID = 'YOUR_NPOINT_ID_HERE';
 
-    // Get current SHA if file already exists (GitHub requires this to overwrite)
-    let sha = undefined;
-    const existing = await fetch(API_URL, {
-      headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
-    });
-    if (existing.ok) {
-      const data = await existing.json();
-      sha = data.sha;
-    }
-
-    // Push assembly.json to repo
-    const response = await fetch(API_URL, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: `New assembly plan ${new Date().toISOString()}`,
-        content: btoa(JSON.stringify(plan, null, 2)),
-        ...(sha && { sha })
-      })
+    const response = await fetch(`https://api.npoint.io/${NPOINT_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(plan)
     });
 
     if (response.ok) {
       setStatus(`✓ Sent ${placed.length} block(s) to robot!`);
     } else {
-      setStatus('Export failed — check token permissions');
+      setStatus('Export failed');
     }
 
   } catch (err) {
