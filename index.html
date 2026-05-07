@@ -50,6 +50,7 @@ body { display: flex; height: 100vh; overflow: hidden; font-family: 'Segoe UI', 
 }
 .btn:hover { opacity: 0.82; }
 .btn-export { background: #238636; color: #fff; }
+.btn-send  { background: #1f6feb; color: #fff; }
 .btn-reset { background: #b91c1c; color: #fff; }
 
 #canvas-container { flex: 1; position: relative; overflow: hidden; }
@@ -102,7 +103,8 @@ body { display: flex; height: 100vh; overflow: hidden; font-family: 'Segoe UI', 
   <div style="flex-grow: 1;"></div>
 
   <button class="btn btn-export" id="btn-export">Export Build Plan</button>
-  <button class="btn btn-reset" id="btn-reset">Reset Build</button>
+  <button class="btn btn-send"   id="btn-send">Send to Robot</button>
+  <button class="btn btn-reset"  id="btn-reset">Reset Build</button>
 </div>
 
 <div id="canvas-container">
@@ -126,10 +128,13 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
-const GRID = 20;
+const GRID = 16;
 const VU   = 0.6;   // 1 Vertical Unit = 0.6 world units (half a standard brick)
 const SR   = 0.18;  // stud radius
 const SH   = 0.2;   // stud height
+
+const JSONBIN_ID  = '69fa7a5d36566621a82c98c7';
+const JSONBIN_KEY = '$2a$10$NCneQ9Ep5v3h/EScA.B7E../Xy0LcWBhFaGgSHjuoQ.NAoxjmZTJC';
 
 const BLOCK_DIMS = {
   // Standard Boxes
@@ -145,6 +150,7 @@ const BLOCK_DIMS = {
   '2x4-fillet-top-both': { w: 2, d: 4, h: 2, shape: 'fillet-top-both' },
   '2x4-fillet-bot-both': { w: 2, d: 4, h: 2, shape: 'fillet-bot-both' }
 };
+
 const COLOR_HEX = {
   red: 0xdb2a2a, orange: 0xe8871e, pink: 0xe559a4, yellow: 0xF5C518,
   blue: 0x2B7FE5, white: 0xf4f4f4, green: 0x249630, lime: 0x8bd638,
@@ -165,12 +171,10 @@ const wG = w => Math.round(w + GRID / 2 - 0.5);
 
 function dims(type, rot) {
   const b = BLOCK_DIMS[type];
-
   if (!b) {
     console.error("Critical: Unknown block type requested:", type);
     return { w: 1, d: 1, h: 1, shape: 'box', rawW: 1, rawD: 1 };
   }
-
   const isRot = rot % 2 === 1;
   return {
     w: isRot ? b.d : b.w,
@@ -185,7 +189,6 @@ function dims(type, rot) {
 // ── CONNECTION LOGIC ──────────────────────────────────────────────────────────
 function hasTopStud(type, rot, localX, localZ) {
   const { w, d, shape } = dims(type, rot);
-
   if (shape === 'fillet-top-end') {
     if (rot === 0 && localZ === 0) return false;
     if (rot === 1 && localX === w - 1) return false;
@@ -229,7 +232,7 @@ const initialInventory = {
 const inventory = { ...initialInventory };
 
 const placed    = [];
-const occ       = {};                    // `x,z,layer` → id
+const occ       = {};
 let   uid       = 0;
 const newId     = () => `b${uid++}`;
 
@@ -434,12 +437,9 @@ function createBodyGeometry(shape, w, d, bodyH, rot) {
     }
 
     const geo = new THREE.ExtrudeGeometry(s, { depth: extrudeW, bevelEnabled: false });
-
     geo.rotateY(Math.PI / 2);
     geo.translate(-extrudeW / 2, -bodyH / 2, profileD / 2);
-
     if (isRotated) geo.rotateY(-Math.PI / 2);
-
     return geo;
   }
 }
@@ -549,7 +549,6 @@ function isValid(gx, gz, type, rot, ly, excludeId = null) {
 
   for (const [x, z] of cs) {
     if (x < 0 || x >= GRID || z < 0 || z >= GRID) return false;
-
     for (let i = 0; i < h; i++) {
       const key = `${x},${z},${ly + i}`;
       if (occ[key] !== undefined && occ[key] !== excludeId) return false;
@@ -559,17 +558,12 @@ function isValid(gx, gz, type, rot, ly, excludeId = null) {
   if (ly > 0) {
     for (const [x, z] of cs) {
       const belowId = occ[`${x},${z},${ly - 1}`];
-
       if (belowId === undefined || belowId === excludeId) return false;
-
       const belowBlock = placed.find(p => p.id === belowId);
       if (belowBlock) {
         const bsx = x - belowBlock.gx;
         const bsz = z - belowBlock.gz;
-
-        if (!hasTopStud(belowBlock.type, belowBlock.rot, bsx, bsz)) {
-          return false;
-        }
+        if (!hasTopStud(belowBlock.type, belowBlock.rot, bsx, bsz)) return false;
       }
     }
   }
@@ -640,7 +634,6 @@ function deleteBlock(id) {
   if (idx === -1) return;
 
   const b = placed[idx];
-
   const topLy = b.ly + b.h;
   for (const [x, z] of b.cells) {
     if (occ[`${x},${z},${topLy}`]) {
@@ -650,7 +643,6 @@ function deleteBlock(id) {
   }
 
   scene.remove(b.mesh);
-
   for (let i = 0; i < b.h; i++) {
     b.cells.forEach(([x, z]) => delete occ[`${x},${z},${b.ly + i}`]);
   }
@@ -722,7 +714,6 @@ function rotatePlaced(id) {
 
     selectBlock(b.id);
     setStatus('Block rotated');
-
   } else {
     for (let i = 0; i < b.h; i++) {
       b.cells.forEach(([x, z]) => { occ[`${x},${z},${b.ly + i}`] = b.id; });
@@ -734,7 +725,6 @@ function rotatePlaced(id) {
 // ── UI HELPERS ────────────────────────────────────────────────────────────────
 function setStatus(msg) { document.getElementById('status').textContent = msg; }
 
-// ── REFRESH INVENTORY UI ──────────────────────────────────────────────────────
 function refreshInventory() {
   document.querySelectorAll('.block-card').forEach(card => {
     const type = card.dataset.type;
@@ -769,14 +759,12 @@ function hideRotBadge() {
 // ── DRAG FROM PALETTE ─────────────────────────────────────────────────────────
 function startDrag(card) {
   const key = `${card.dataset.color}-${card.dataset.type}`;
-
   if (inventory[key] <= 0) {
     setStatus(`No more ${card.dataset.color} ${card.dataset.type} blocks left!`);
     return;
   }
 
   clearSelection();
-
   dragging   = true;
   dragType   = card.dataset.type;
   dragColor  = card.dataset.color;
@@ -804,7 +792,6 @@ function endDrag(place) {
 }
 
 // ── EVENTS ────────────────────────────────────────────────────────────────────
-
 document.addEventListener('mousemove', e => {
   lastMx = e.clientX; lastMy = e.clientY;
   if (dragging && dragType) {
@@ -822,7 +809,6 @@ document.addEventListener('mouseup', e => {
   endDrag(oc);
 });
 
-// Canvas left-click → select/deselect
 renderer.domElement.addEventListener('mousedown', e => {
   if (e.button !== 0 || dragging) return;
   setMouse(e.clientX, e.clientY);
@@ -870,13 +856,8 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// ── EXPORT ────────────────────────────────────────────────────────────────────
-document.getElementById('btn-export').addEventListener('click', async () => {
-  if (placed.length === 0) {
-    setStatus('Nothing to export!');
-    return;
-  }
-
+// ── BUILD PLAN HELPER ─────────────────────────────────────────────────────────
+function buildPlan() {
   const sortedBlocks = [...placed].sort((a, b) => {
     const aTop = a.ly + a.h;
     const bTop = b.ly + b.h;
@@ -888,15 +869,19 @@ document.getElementById('btn-export').addEventListener('click', async () => {
 
   const maxLy = Math.max(...placed.map(b => b.ly));
 
-  const plan = {
+  let height_category = 'normal';
+
+  return {
     metadata: {
       timestamp: new Date().toISOString(),
       total_blocks: placed.length,
       layers: maxLy + 1,
-      sorting_strategy: "top_layer_first"
+      sorting_strategy: 'top_layer_first'
     },
     sequence: sortedBlocks.map((b, i) => {
-      const { w, d } = dims(b.type, b.rot);
+      if (b.h === 1) height_category = 'half';
+      else if (b.h === 4) height_category = 'tall';
+      else height_category = 'normal';
 
       const occupied_3d = [];
       for (let h_offset = 0; h_offset < b.h; h_offset++) {
@@ -911,42 +896,53 @@ document.getElementById('btn-export').addEventListener('click', async () => {
         color: b.color,
         grid_position: { x: b.gx, y: b.ly, z: b.gz },
         rotation_deg: b.rot * 90,
+        height_type: height_category,
         occupied_cells: occupied_3d
       };
     })
   };
+}
 
-  // Download local copy
+// ── EXPORT ────────────────────────────────────────────────────────────────────
+document.getElementById('btn-export').addEventListener('click', () => {
+  if (placed.length === 0) { setStatus('Nothing to export!'); return; }
+
+  const plan = buildPlan();
   const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href = url; a.download = `lego_build_plan_${Date.now()}.json`;
+  a.href = url;
+  a.download = `lego_build_plan_${Date.now()}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  setStatus(`Exported ${placed.length} block(s).`);
+});
 
-  // Upload to JSONBin
+// ── SEND TO ROBOT ─────────────────────────────────────────────────────────────
+document.getElementById('btn-send').addEventListener('click', async () => {
+  if (placed.length === 0) { setStatus('Nothing to send!'); return; }
+
   setStatus('Sending to robot...');
-
   try {
-    const JSONBIN_ID  = '69fa7a5d36566621a82c98c7';
-    const JSONBIN_KEY = '$2a$10$NCneQ9Ep5v3h/EScA.B7E../Xy0LcWBhFaGgSHjuoQ.NAoxjmZTJC';
-
     const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_ID}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'X-Master-Key': JSONBIN_KEY
       },
-      body: JSON.stringify(plan)
+      body: JSON.stringify(buildPlan())
     });
 
     if (response.ok) {
-      setStatus(`✓ Sent ${placed.length} block(s) to robot!`);
+      setStatus(`Sent ${placed.length} block(s) to robot.`);
     } else {
-      setStatus('Export failed — check console');
+      const err = await response.json().catch(() => ({}));
+      console.error('JSONBin error:', err);
+      setStatus('Send failed — check console.');
     }
   } catch (err) {
-    setStatus(`Error: ${err.message}`);
+    console.error('JSONBin fetch error:', err);
+    setStatus('Error — could not reach JSONBin.');
   }
 });
 
