@@ -390,10 +390,10 @@
     <div class="subsection">
       <h3>Project Goals</h3>
       <p>
-        Legos are snap-fit building blocks that can be used to build endless structures, people, or mechanisms. As engineers, we all grew up playing and building with Legos almost every day, sparking our passion for making things. We wanted to build a robot that can build Legos as a demonstration of how far we have come in our engineering abilities.
+        Legos are snap-fit building blocks that can be used to build endless structures, figures, or mechanisms. As engineers, we all grew up playing and building with Legos almost every day, sparking our passion for making things. We wanted to build a robot that assembles Legos — a fitting demonstration of how far our engineering skills have come.
       </p>
       <p>
-        The goal of the project is for the robot to be able to build any given structure from a standard set of Duplo Lego bricks. It should be able to detect these bricks from anywhere on the table and place them in the correct position and order on a build plate. To achieve this goal we built a custom Lego building website where a user can make a unique build using our set of Legos and send it to the robot. Once a build is submitted the UR7e robotic arm will plan out the build order, find all the required bricks, then assemble the set.
+        The goal of the project is for the robot to be able to build any given structure from a standard set of Duplo Lego bricks. It should be able to detect these bricks from anywhere on the table and place them in the correct position and order on a build plate. To achieve this goal, we built a custom website where a user can design a custom build from our set of Legos and send it to the robot. Once a build is submitted the UR7e robotic arm will plan out the build order, find all the required bricks, then assemble the set.
 
       </p>
 
@@ -410,12 +410,12 @@
     <div class="subsection">
       <h3>Why a Duplo Assembler?</h3>
       <p>
-        We chose Duplo bricks because they are much larger than normal bricks and about the perfect size for our UR7e’s gripper. One goal of this project is to develop an interesting computer vision module. We thought the Legos were the perfect balance of simplicity and complexity for this problem. While every brick is rectangular and brightly colored, there are over 10 different (often very similar) colors and rotations/configurations the bricks can be in. We also had to design a custom gripper to grip each Lego by the studs because side grips would interfere with neighboring bricks. Lastly we thought this project would be a fun expression of our love of building and make for an aesthetic result.
+        We chose Duplo bricks because they are much larger than normal bricks and about the perfect size for our UR7e’s gripper. One goal of this project is to develop an interesting computer vision module. We thought the Legos were the perfect balance of simplicity and complexity for this problem. While every brick is rectangular and brightly colored, there are over 10 different (often very similar) colors and orientations the bricks can be in. We also had to design a custom gripper to grip each Lego by the studs because side grips would interfere with neighboring bricks. Lastly, we thought this project would be a fun expression of our love of building and make for an aesthetic result.
 
       </p>
       <p>
         Some real-world applications include stacking or packaging robots that need to place many different shaped and sized
-        objects correctly while also sorting for things like color. A novel gripper attachment would allow the robot to pick
+        objects correctly while also sorting by color. A novel gripper attachment would allow the robot to pick
         up oddly shaped items as well. Controlling from a website may allow people to define how they would like their items
         packed in a specific space remotely, while also being able to change how it is done quickly. There are implications
         for workers not having to rewrite code manually for any change, but just using a website to change the final pose of
@@ -433,7 +433,7 @@
     <div class="subsection">
       <h3>Design Criteria</h3>
       <p>
-Our system assumes bricks are placed stud-side up anywhere on a flat table, within the range of our robotic arm. This allowed any bricks or markers to always be within the field of view of the RealSense camera (based on the robot limits). We also assumed the ArUco marker which the camera sees to find the transform to the Lego baseplate would remain visible on this table. A successful implementation would mean the robot can correctly pick up and place each brick, following the user's design without knocking over neighbors or misaligning on the build plate. It must also distinguish 10 brick colors under the weak, inconsistent lighting of the 106A lab, detect arbitrary yaw orientations (not just grid-aligned), and position bricks accurately enough to engage Duplo clutch power. We also assume there are no impossible Lego configurations or overhangs in the actual set. Our website enforces these constraints automatically.
+Our system assumes bricks are placed stud-side up anywhere on a flat table within the reach of the robotic arm, ensuring both the bricks and the ArUco marker remain within the camera's field of view. A successful implementation would mean the robot can correctly pick up and place each brick, following the user's design without knocking over neighbors or misaligning on the build plate. It must also distinguish 10 brick colors under the weak, inconsistent lighting of the 106A lab, detect arbitrary yaw orientations (not just grid-aligned), and position bricks accurately enough to engage Duplo clutch power. We also assume there are no impossible Lego configurations or overhangs in the actual set. Our website enforces these constraints automatically.
       </p>
     </div>
 
@@ -459,7 +459,7 @@ The first major design choice we made for the gripper was the decision to pick u
 
       <h4>Website</h4>
       <p>
-       When we first conceptualized our project we were originally going to have the robot scan an existing build and replicate it. We decided to move to using a digital Lego build made on a website for several reasons: 1) Limit scope creep — by limiting our computer vision tasks we were able to create a more robust brick detection model which vastly improved our assembly. 2) Real world applications of our project — it is now extremely common for CAD software to be used to design real world objects in manufacturing and design and we wanted to replicate that work flow for Legos in our project.
+       When we first conceptualized the project, we planned to have the robot scan an existing build and replicate it. We decided to move to a digital Lego build designed on a website for several reasons: 1) Reduced scope creep — by narrowing our computer vision tasks we were able to create a more robust brick detection model, which vastly improved our assembly. 2) Real-world parallels — CAD-driven workflows are now standard in manufacturing, and we wanted to mirror that approach for Lego assembly.
       </p>
 
       <h4>Detection Node</h4>
@@ -485,7 +485,7 @@ The first major design choice we made for the gripper was the decision to pick u
 
       <h4>Planning and Execution Node</h4>
       <p>
-The planning node has three main functions, handle the state transitions between robot tasks, plan the inverse kinematics for joint moves, and send instructions to all the other nodes. For our inverse kinematics we used a model from lab 5 which took in current and goal joint positions to calculate trajectories using MoveIt. This might have been a mistake because the seeding of these trajectories created a lot of variance in actual end positions. For better precision we should have implemented a PID controller or a calculated inverse kinematics using jacobians. For node communication we mainly used topic publishers and subscribers in the ROS2 environment. This approach was simple and relatively clean. ROS2 services were used for inverse kinematics calculations and toggle gripper calls.
+The planning node has three main functions: handle state transitions between robot tasks, plan inverse kinematics for joint moves, and send instructions to all other nodes. For inverse kinematics we used a trajectory model from Lab 5 that took in current and goal joint positions to calculate trajectories using MoveIt. This proved to be a limitation, as the seeding of these trajectories introduced significant variance in end-effector positions. For better precision we should have implemented a PID controller or a Jacobian-based IK solver. For node communication we mainly used topic publishers and subscribers in the ROS2 environment. This approach was simple and relatively clean. ROS2 services were used for inverse kinematics calculations and toggle gripper calls.
       </p>
     </div>
   </div>
@@ -630,7 +630,7 @@ The planning node has three main functions, handle the state transitions between
     <div class="subsection">
       <h3>Module 3 — Path Planning and Inverse Kinematics</h3>
       <p>
-We had a lot of trouble with our inverse kinematics node during implementation. When the planner wants to move the robot we call MoveIt’s inverse kinematics multiple times until it finds an acceptable solution. This prevents the robot from creating long or impossible trajectories. A couple cases had to be hard coded into the planner. Before planning we choose a brick pose that needs the least amount of yaw rotation and when there is an ambiguous position we lock the yaw to one of the cardinal directions. We also have a precoded safe position that the robot will go to when making large moves. This prevents the inverse kinematics planner from making extreme unsafe movements that would endanger the build or a person when it tries to reach far away positions.      </p>
+The inverse kinematics node proved the most difficult module to get working reliably. When the planner needed to move the robot, we called MoveIt’s IK solver repeatedly until it found an acceptable solution, which prevented the robot from generating long or impossible trajectories. A few edge cases were hardcoded into the planner: before each move, we selected the brick pose requiring the least yaw rotation, and locked the yaw to the nearest cardinal direction when the orientation was ambiguous. We also defined a hardcoded safe home position that the robot returns to before large moves, preventing the IK planner from taking unsafe paths to distant positions that could endanger the build or nearby people.      </p>
       <p><em>One of the worst bugs we encountered was in the interaction between the planning and inverse kinematics nodes. The planning node never shut down our CV node which was very computationally expensive. The CV node combined with the inverse kinematics calculation caused our controller to lag, miss interpolation steps, and eventually crash the robot. We fixed this bug by disabling CV unless the robot is stationary.
 </em></p>
     </div>
@@ -657,7 +657,7 @@ We had a lot of trouble with our inverse kinematics node during implementation. 
   <div class="container">
     <h2>Results</h2>
     <p>
-      Our system is able to build simple Lego sets. We have a placement success rate of about 85% due to the tight tolerances of Lego bricks, but a brick detection rate of close to 100%. We have yet to see our slicer fail to create an impossible build plan. Overall, given our hardware constraints and current software architecture, we think this result is very successful.
+      Our system is able to build simple Lego sets. We have a placement success rate of about 85% due to the tight tolerances of Lego bricks, but a brick detection rate of close to 100%. Our slicer has never produced an invalid build plan. Overall, given our hardware constraints and current software architecture, we think this result is very successful.
     </p>
 
     <figure class="figure">
@@ -676,7 +676,7 @@ We had a lot of trouble with our inverse kinematics node during implementation. 
     </figure>
 
     <p><em>
-      Our main challenges right now are picking and placing 2x2 bricks. We found that there just isn't enough point cloud data to reliably find accurate positions and poses of these bricks. Maybe another CV approach would yield better results. Another issue is placing bricks onto the build plate. Due to the tolerances of Legos and the error caused by both detecting the center of the bricks and getting an accurate ArUco tag transform, we haven't been able to get completely reliable press fits of the Lego bricks.
+      Our primary remaining challenges are picking and placing 2×2 bricks. There simply isn't enough point cloud data to reliably estimate the positions and poses of these small bricks. A different CV approach, such as learned detection, would likely yield better results. Reliable press fits on the build plate are also an ongoing challenge — the combined error from centroid detection and the ArUco tag transform is often just enough to prevent the studs from fully engaging.
     </em></p>
   </div>
 </section>
@@ -698,7 +698,7 @@ Centroid position error of about 1mm after aggressive tuning, insufficient for a
         <li><strong>Project scope versus time:</strong> Our project scope was very large given the time on a robot shared across many other groups</li>
       </ul>
       <p>
-        In this project, we demonstrated our ability to build a complicated system that can use CV to plan novel Lego arrangements and execute them semi-reliably while integrating custom hardware we designed. We are excited with the final product we have produced and the challenges we faced while working on this project gave us a new appreciation for how hard seemingly simple tasks can be and pushed our problem-solving skills to their limit. We think this project is a great example of our growth as builders from when we created complex machines and structures from Legos to building a complex machine that builds Legos. 
+        In this project, we demonstrated our ability to build a complex system that uses computer vision to plan novel Lego arrangements and execute them semi-reliably, all while integrating custom hardware we designed ourselves. We are proud of the final product we produced. The challenges we faced gave us a new appreciation for how hard seemingly simple tasks can be and pushed our problem-solving skills to their limit. We think this project is a great example of our growth as builders — from assembling complex structures with Legos as kids to building a machine that assembles them for us.
     </div>
 
     <div class="subsection">
