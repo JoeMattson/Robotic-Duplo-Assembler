@@ -509,7 +509,20 @@
     <div class="subsection">
       <h3>Hardware</h3>
       <p>
-        Describe your hardware setup. What robot, sensor, or custom device did you use? Explain any significant fabrication or integration work. Highlight design decisions and their rationale.
+        Our setup centers on the UR7e robotic arm, which provides the reach and precision needed to pick bricks from
+        anywhere on the table and place them onto the build plate. A RealSense depth camera is mounted above the
+        workspace, providing both the RGB image and the organized point cloud that the detection node relies on.
+        The build surface is a standard 16×16 stud Duplo baseplate, fixed to the table with an ArUco marker jig
+        3D printed to sit flush at the corner — this gives the robot a repeatable coordinate frame for the build area
+        at startup.
+      </p>
+      <p>
+        The most significant custom fabrication was the end-effector gripper. It is a 3D printed vice-clamp style
+        tool that pinches the top studs of each brick from the outside. Because the gripper contacts only the studs
+        and not the sides of the brick, it can lower onto a brick that is already surrounded by neighbors without
+        colliding with them. Several iterations were needed to dial in the finger geometry and compliance — early
+        prints were too rigid and would either miss the studs or crack them; the final design has a slight flex in
+        the fingers to tolerate small positioning errors from the CV system.
       </p>
 
       <div class="figure-grid">
@@ -519,7 +532,7 @@
         </figure>
         <figure class="figure">
           <img src="images/GripperWitheLego.jpg" alt="Gripper holding a Duplo brick" />
-          <figcaption>Gripper with brick</figcaption>
+          <figcaption>Gripper holding a brick</figcaption>
         </figure>
         <figure class="figure">
           <div class="figure-placeholder">
@@ -529,8 +542,6 @@
           <figcaption>Gripper clearance vs. neighboring brick</figcaption>
         </figure>
       </div>
-
-      <p><em>Describe any issues or roadblocks you encountered with your hardware and how you addressed them. For example, did you iterate on a design? Did you switch materials or components?</em></p>
     </div>
 
     <div class="subsection">
@@ -569,8 +580,40 @@
     <div class="subsection">
       <h3>Module 2 — Brick Detection and Pose Estimation</h3>
       <p>
-        Describe the second major software module. Explain the algorithm, any assumptions it relies on, and how you validated its outputs.
+        The detection node takes the RealSense point cloud and RGB stream as input and outputs the 6-DOF pose, color,
+        shape, and height of every brick visible on the table. The pipeline runs as follows:
       </p>
+      <ol class="steps">
+        <li><strong>Baseplate localization:</strong> On startup, the node attempts ArUco detection on the RGB image
+        using 6 parameter combinations with varying CLAHE preprocessing and threshold windows to handle the weak,
+        uneven lighting in the 106A lab. Once the marker is detected across 3 consecutive frames, the baseplate's
+        position is averaged and locked as a static TF frame (<code>baseplate_frame</code>). If ArUco fails entirely,
+        the node falls back to HSV segmentation of the green baseplate surface.</li>
+
+        <li><strong>Point cloud filtering:</strong> The organized point cloud is transformed into
+        <code>baseplate_frame</code> coordinates. Points are then filtered to only those within the XY footprint of
+        the build area (plus a 20 mm margin) and within a Z band above the table surface but below the tallest
+        possible brick. This eliminates the robot arm, table edges, and background clutter before any clustering.</li>
+
+        <li><strong>Voxel downsampling &amp; DBSCAN clustering:</strong> The filtered cloud is voxel-downsampled at
+        2 mm resolution for speed, then clustered with DBSCAN (ε = 12 mm, min points = 10). DBSCAN was chosen
+        because it does not require specifying the number of bricks in advance and naturally rejects noise as
+        unclustered points.</li>
+
+        <li><strong>Per-cluster classification:</strong> Each cluster is classified independently. Color is
+        determined by converting the cluster's point colors from BGR to LAB space and matching against pre-tuned
+        LAB ranges for 11 colors — any cluster where fewer than 40% of points match a color is discarded as noise
+        or glare. Shape and yaw are estimated by running PCA on the XY extent of the cluster: the long and short
+        axes are divided by the 16 mm Duplo stud pitch to get stud counts, which are snapped to the four valid brick
+        shapes (1×2, 2×2, 2×4, 2×6). The angle of the PCA long axis gives the brick's yaw, handling arbitrary
+        off-grid rotations. Height is estimated from the 90th-percentile Z value of the cluster and classified as
+        half, normal, or tall.</li>
+
+        <li><strong>Pose publication:</strong> Each detected brick's centroid (median of top-surface points) and
+        orientation are transformed into <code>base_link</code> frame and published as a
+        <code>PoseArray</code> alongside a JSON metadata string containing color, shape, and height type for the
+        planning node to consume.</li>
+      </ol>
 
       <div class="figure-grid">
         <figure class="figure">
@@ -578,19 +621,23 @@
           <figcaption>Full scene point cloud</figcaption>
         </figure>
         <figure class="figure">
-          <img src="images/filteredPoints.png" alt="Isolated brick point cloud" />
-          <figcaption>Isolated brick point cloud</figcaption>
+          <img src="images/filteredPoints.png" alt="Isolated brick point cloud after filtering" />
+          <figcaption>Filtered to baseplate footprint</figcaption>
         </figure>
         <figure class="figure">
-          <img src="images/poses.png" alt="Point cloud with detected poses" />
-          <figcaption>Detected brick poses</figcaption>
+          <img src="images/poses.png" alt="Point cloud with detected brick poses" />
+          <figcaption>Detected poses overlaid</figcaption>
         </figure>
       </div>
 
       <p>
-        You may also want to describe any alternative approaches you considered and why you didn't pursue them (e.g. off-the-shelf models, different sensor modalities).
+        The most time-consuming part of this module was color tuning. The LAB color ranges for each brick had to be
+        calibrated against the 106A lab's lighting specifically, as the same brick looks meaningfully different under
+        different illumination. We built a separate HSV/LAB tuner tool to capture live frames and interactively
+        adjust the ranges until all 10 colors were reliably distinguished. The trickiest pairs were orange/red and
+        light blue/mint, which required tightening the ranges significantly — at the cost of occasionally dropping
+        detections on bricks hit by a strong specular reflection.
       </p>
-      <p><em>Explain any interesting challenges or obstacles, briefly describe what didn't work and why.</em></p>
     </div>
 
     <div class="subsection">
