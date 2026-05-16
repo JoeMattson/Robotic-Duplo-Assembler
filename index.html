@@ -1,972 +1,714 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>LEGO Builder – Robot Arm Planner</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { display: flex; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LEGO Bot — EECS 106A Final Project</title>
+  <meta name="description" content="Team 6 — EECS 106A — UC Berkeley — Spring 2026" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-#sidebar {
-  width: 210px; min-width: 210px;
-  background: #161b22;
-  border-right: 1px solid #30363d;
-  display: flex; flex-direction: column;
-  padding: 14px 12px; gap: 10px;
-  overflow-y: auto;
-}
+    :root {
+      --bg: #f8f6f1;
+      --surface: #ffffff;
+      --ink: #1a1a18;
+      --ink-muted: #5a5a52;
+      --accent: #e0201c;
+      --accent-light: #fdeaea;
+      --border: #e2ddd5;
+      --nav-h: 60px;
+      --max-w: 900px;
+      --font-display: 'DM Serif Display', Georgia, serif;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
 
-#sidebar h1 { font-size: 13px; color: #58a6ff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+    html { scroll-behavior: smooth; }
 
-.section-label { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      font-size: 16px;
+    }
 
-.block-card {
-  background: #21262d; border: 2px solid #30363d; border-radius: 8px;
-  padding: 8px 10px; cursor: grab; user-select: none;
-  transition: border-color 0.12s, background 0.12s;
-  display: flex; align-items: center; gap: 8px;
-}
-.block-card:hover:not(.empty) { border-color: #58a6ff; background: #1c2128; }
-.block-card.empty { opacity: 0.38; cursor: not-allowed; }
-.block-card.active-drag { border-color: #7ee787; background: #1a2a1a; cursor: grabbing; }
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(248, 246, 241, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      height: var(--nav-h);
+      display: flex;
+      align-items: center;
+      padding: 0 2rem;
+      gap: 2rem;
+    }
 
-.block-swatch { border-radius: 3px; flex-shrink: 0; height: 18px; }
-.block-info { flex: 1; }
-.block-name { font-size: 11px; font-weight: 600; }
-.block-count { font-size: 10px; color: #8b949e; margin-top: 1px; }
+    .nav-logo {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
 
-.controls-box {
-  background: #21262d; border-radius: 8px; padding: 9px 10px;
-  font-size: 10px; line-height: 1.9; color: #8b949e;
-}
-.controls-box b { color: #c9d1d9; }
+    .nav-links {
+      display: flex;
+      gap: 0;
+      list-style: none;
+      overflow-x: auto;
+      flex: 1;
+    }
 
-.spacer { flex: 1; }
+    .nav-links a {
+      display: block;
+      padding: 0 1rem;
+      color: var(--ink-muted);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      line-height: var(--nav-h);
+      transition: color 0.15s;
+    }
 
-.btn {
-  padding: 7px 10px; border-radius: 6px; border: none;
-  cursor: pointer; font-size: 11px; font-weight: 600;
-  transition: opacity 0.15s; width: 100%;
-}
-.btn:hover { opacity: 0.82; }
-.btn-export { background: #238636; color: #fff; }
-.btn-send  { background: #1f6feb; color: #fff; }
-.btn-reset { background: #b91c1c; color: #fff; }
+    .nav-links a:hover { color: var(--accent); }
 
-#canvas-container { flex: 1; position: relative; overflow: hidden; }
-#canvas { width: 100%; height: 100%; display: block; }
+    /* ── Hero ── */
+    .hero-band {
+      background: #1a1a18;
+      border-bottom: 3px solid var(--accent);
+    }
 
-#status {
-  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
-  background: rgba(22,27,34,0.92); border: 1px solid #30363d;
-  border-radius: 20px; padding: 5px 14px; font-size: 11px;
-  pointer-events: none; white-space: nowrap; backdrop-filter: blur(4px);
-  transition: opacity 0.2s;
-}
+    .hero-image-wrap {
+      display: flex;
+      justify-content: center;
+      padding: 3rem 2rem 0;
+    }
 
-#rot-badge {
-  position: absolute; top: 12px; left: 12px;
-  background: rgba(22,27,34,0.92); border: 1px solid #30363d;
-  border-radius: 8px; padding: 5px 10px; font-size: 11px;
-  display: none; pointer-events: none;
-}
+    .hero-brick-img { width: 150px; height: auto; }
 
-#sel-badge {
-  position: absolute; top: 12px; right: 12px;
-  background: rgba(88,166,255,0.15); border: 1px solid #58a6ff;
-  border-radius: 8px; padding: 5px 10px; font-size: 11px;
-  display: none; pointer-events: none; color: #58a6ff;
-}
-</style>
+    .hero {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 2.5rem 2rem 4rem;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+      margin-left: calc(-50vw + 50%);
+      margin-right: calc(-50vw + 50%);
+      padding: 0.5rem 2rem;
+      color: #ffffff;
+    }
+
+    .hero-subtitle {
+      font-size: 1.1rem;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 0.02em;
+      margin-bottom: 1rem;
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    section {
+      padding: 4rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    section:last-of-type { border-bottom: none; }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+      margin-bottom: 2.5rem;
+      color: #ffffff;
+      padding: 0.75rem 1.25rem;
+      background: #1a1a18;
+      border-radius: 8px;
+    }
+
+    h2::before { display: none; }
+
+    h3 {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      color: var(--ink);
+    }
+
+    h4 {
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    p { margin-bottom: 1.25rem; color: var(--ink); }
+    p:last-child { margin-bottom: 0; }
+
+    .subsection { margin-bottom: 3rem; }
+    .subsection:last-child { margin-bottom: 0; }
+
+    /* ── Callout ── */
+    .callout {
+      background: var(--bg);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .callout h4 { margin-bottom: 0.5rem; }
+
+    /* ── Lists ── */
+    ol.steps { list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 1rem; margin: 1.5rem 0; }
+    ol.steps li { counter-increment: step; display: flex; gap: 1rem; align-items: flex-start; }
+    ol.steps li::before {
+      content: counter(step) ".";
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--ink-muted);
+      margin-top: 0.15rem;
+    }
+
+    ul.bullets { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; margin: 1rem 0; }
+    ul.bullets li { display: flex; gap: 0.75rem; align-items: flex-start; }
+    ul.bullets li::before { content: '●'; color: var(--accent); flex-shrink: 0; margin-top: 0.15em; font-size: 0.7rem; }
+
+    ul.checks { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; margin: 1rem 0; }
+    ul.checks li { display: flex; gap: 0.75rem; align-items: flex-start; }
+    ul.checks li::before { content: '✓'; color: var(--accent); flex-shrink: 0; font-weight: 700; }
+
+    /* ── Figures ── */
+    .figure { margin: 2rem 0; text-align: center; }
+
+    .figure img, .figure video {
+      max-width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    }
+
+    .figure video { width: 100%; }
+
+    .figure figcaption {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--ink-muted);
+      margin-top: 0.75rem;
+      letter-spacing: 0.02em;
+    }
+
+    .figure-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin: 2rem 0;
+    }
+
+    /* ── Placeholder ── */
+    .figure-placeholder {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-height: 160px;
+      padding: 1.5rem;
+    }
+
+    .figure-placeholder span {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--ink-muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Team Cards ── */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .team-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .team-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.09); transform: translateY(-2px); }
+
+    .member-name {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      margin-bottom: 0.4rem;
+      color: var(--ink);
+    }
+
+    .member-bio {
+      font-size: 0.82rem;
+      color: var(--ink-muted);
+      margin-bottom: 0.75rem;
+      line-height: 1.55;
+    }
+
+    .member-role {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Builder iframe ── */
+    .builder-frame {
+      width: 100%;
+      height: 720px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.1);
+      display: block;
+      margin: 1.5rem 0;
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--ink);
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      padding: 2.5rem 2rem;
+      font-size: 0.82rem;
+      line-height: 2;
+    }
+
+    footer strong { color: #fff; }
+
+    @media (max-width: 600px) {
+      .nav-links a { padding: 0 0.6rem; font-size: 0.75rem; }
+      .hero { padding: 3rem 1.25rem 2.5rem; }
+      .container { padding: 0 1.25rem; }
+      .builder-frame { height: 500px; }
+    }
+  </style>
 </head>
 <body>
 
-<div id="sidebar">
-  <h1>LEGO Builder</h1>
+<!-- ── Navigation ── -->
+<nav>
+  <a class="nav-logo" href="#">[LEGO BOT]</a>
+  <ul class="nav-links">
+    <li><a href="#introduction">Introduction</a></li>
+    <li><a href="#design">Design</a></li>
+    <li><a href="#implementation">Implementation</a></li>
+    <li><a href="#results">Results</a></li>
+    <li><a href="#conclusion">Conclusion</a></li>
+    <li><a href="#team">Team</a></li>
+    <li><a href="#builder">Builder</a></li>
+  </ul>
+</nav>
 
-  <div class="section-label">Inventory</div>
-  <div id="inventory-container" style="display: flex; flex-direction: column; gap: 10px;"></div>
-
-  <div class="section-label" style="margin-top: 15px;">Controls</div>
-  <div style="font-size: 11px; color: #8b949e; line-height: 1.6; margin-top: 4px;">
-    <b>Click card</b> to equip block<br>
-    <b>Click grid</b> to place block<br>
-    <b>R</b> rotate while placing<br>
-    <b>Click placed</b> to select it<br>
-    <b>R</b> rotate selected block<br>
-    <b>Delete</b> remove selected<br>
-    <b>Esc</b> cancel / deselect<br>
-    <b>Right-drag</b> orbit camera<br>
-    <b>Scroll</b> zoom
+<!-- ── Hero ── -->
+<div class="hero-band">
+  <div class="hero-image-wrap">
+    <svg class="hero-brick-img" viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" aria-label="Red toy brick">
+      <g fill="#e0201c">
+        <rect x="58"  y="55" width="44" height="25" />
+        <ellipse cx="80"  cy="80" rx="22" ry="9" />
+        <ellipse cx="80"  cy="55" rx="22" ry="8" />
+        <rect x="138" y="55" width="44" height="25" />
+        <ellipse cx="160" cy="80" rx="22" ry="9" />
+        <ellipse cx="160" cy="55" rx="22" ry="8" />
+        <rect x="218" y="55" width="44" height="25" />
+        <ellipse cx="240" cy="80" rx="22" ry="9" />
+        <ellipse cx="240" cy="55" rx="22" ry="8" />
+        <rect x="298" y="55" width="44" height="25" />
+        <ellipse cx="320" cy="80" rx="22" ry="9" />
+        <ellipse cx="320" cy="55" rx="22" ry="8" />
+        <rect x="30" y="78" width="340" height="120" rx="6" ry="6" />
+      </g>
+    </svg>
   </div>
-
-  <div style="flex-grow: 1;"></div>
-
-  <button class="btn btn-export" id="btn-export">Export Build Plan</button>
-  <button class="btn btn-send"   id="btn-send">Send to Robot</button>
-  <button class="btn btn-reset"  id="btn-reset">Reset Build</button>
+  <header class="hero">
+    <h1>[LEGO BOT] — a robot that assembles Legos!</h1>
+    <p class="hero-subtitle">Team 6 — EECS 106A — UC Berkeley — Spring 2026</p>
+    <p class="hero-subtitle">Nicholas Gellerman &amp; Braden Wang &amp; Scott Schuster &amp; Joe Mattson</p>
+  </header>
 </div>
 
-<div id="canvas-container">
-  <canvas id="canvas"></canvas>
-  <div id="status">Drag a block onto the build plate to start</div>
-  <div id="rot-badge">Rotation: 0°</div>
-  <div id="sel-badge">Block selected</div>
-</div>
+<!-- ── Introduction ── -->
+<section id="introduction">
+  <div class="container">
+    <h2>Introduction</h2>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/"
-  }
-}
-</script>
+    <div class="subsection">
+      <h3>Goals</h3>
+      <p>
+        The goal of our project was to be able to build any Duplo set using the blocks in the Brick Box. We wanted bricks
+        to be picked up from anywhere on the table and placed correctly on the build plate. We wanted to distinguish between
+        colors and brick size. To make this more interesting, we wanted to add in a website for a user to design sets with
+        from anywhere. Then they could submit a build and the robot would be able to build it in the 106A lab using the UR7e robot.
+      </p>
 
-<script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-
-// ── CONSTANTS ────────────────────────────────────────────────────────────────
-const GRID = 16;
-const VU   = 0.6;   // 1 Vertical Unit = 0.6 world units (half a standard brick)
-const SR   = 0.18;  // stud radius
-const SH   = 0.2;   // stud height
-
-const JSONBIN_ID  = '69fa7a5d36566621a82c98c7';
-const JSONBIN_KEY = '$2a$10$NCneQ9Ep5v3h/EScA.B7E../Xy0LcWBhFaGgSHjuoQ.NAoxjmZTJC';
-
-const BLOCK_DIMS = {
-  // Standard Boxes
-  '2x4': { w: 2, d: 4, h: 2, shape: 'box' },
-  '2x2': { w: 2, d: 2, h: 2, shape: 'box' },
-  '2x4-half': { w: 2, d: 4, h: 1, shape: 'box' },
-  '2x6-half': { w: 2, d: 6, h: 1, shape: 'box' },
-  '1x2-double': { w: 1, d: 2, h: 4, shape: 'box' },
-
-  // Weird Shapes
-  '2x2-cylinder': { w: 2, d: 2, h: 4, shape: 'cylinder' },
-  '2x3-fillet-top': { w: 2, d: 3, h: 2, shape: 'fillet-top-end' },
-  '2x4-fillet-top-both': { w: 2, d: 4, h: 2, shape: 'fillet-top-both' },
-  '2x4-fillet-bot-both': { w: 2, d: 4, h: 2, shape: 'fillet-bot-both' }
-};
-
-const COLOR_HEX = {
-  red: 0xdb2a2a, orange: 0xe8871e, pink: 0xe559a4, yellow: 0xF5C518,
-  blue: 0x2B7FE5, white: 0xf4f4f4, green: 0x249630, lime: 0x8bd638,
-  purple: 0x7c2da5, skyblue: 0x6abcf2, lightblue: 0x9cd3f5, brown: 0x6e4221
-};
-
-const COLOR_DARK = {
-  red: 0xa81c1c, orange: 0xb56510, pink: 0xb33d7d, yellow: 0xc09a10,
-  blue: 0x1a5aaa, white: 0xcccccc, green: 0x17661f, lime: 0x67a822,
-  purple: 0x561d75, skyblue: 0x4890c2, lightblue: 0x7aaed1, brown: 0x4a2a12
-};
-
-const hexCSS = (num) => '#' + num.toString(16).padStart(6, '0');
-
-// ── HELPERS ──────────────────────────────────────────────────────────────────
-const gW = g => g - GRID / 2 + 0.5;
-const wG = w => Math.round(w + GRID / 2 - 0.5);
-
-function dims(type, rot) {
-  const b = BLOCK_DIMS[type];
-  if (!b) {
-    console.error("Critical: Unknown block type requested:", type);
-    return { w: 1, d: 1, h: 1, shape: 'box', rawW: 1, rawD: 1 };
-  }
-  const isRot = rot % 2 === 1;
-  return {
-    w: isRot ? b.d : b.w,
-    d: isRot ? b.w : b.d,
-    h: b.h,
-    shape: b.shape,
-    rawW: b.w,
-    rawD: b.d
-  };
-}
-
-// ── CONNECTION LOGIC ──────────────────────────────────────────────────────────
-function hasTopStud(type, rot, localX, localZ) {
-  const { w, d, shape } = dims(type, rot);
-  if (shape === 'fillet-top-end') {
-    if (rot === 0 && localZ === 0) return false;
-    if (rot === 1 && localX === w - 1) return false;
-    if (rot === 2 && localZ === d - 1) return false;
-    if (rot === 3 && localX === 0) return false;
-  }
-  else if (shape === 'fillet-top-both') {
-    if (rot % 2 === 0 && (localZ === 0 || localZ === d - 1)) return false;
-    if (rot % 2 === 1 && (localX === 0 || localX === w - 1)) return false;
-  }
-  return true;
-}
-
-function cells(gx, gz, type, rot) {
-  const { w, d } = dims(type, rot);
-  const out = [];
-  for (let x = 0; x < w; x++) for (let z = 0; z < d; z++) out.push([gx + x, gz + z]);
-  return out;
-}
-
-// ── STATE ────────────────────────────────────────────────────────────────────
-const initialInventory = {
-  // 2x2 Bricks
-  'red-2x2': 4, 'orange-2x2': 2, 'pink-2x2': 2, 'yellow-2x2': 6,
-  'blue-2x2': 4, 'white-2x2': 4, 'green-2x2': 3, 'lime-2x2': 2,
-  'purple-2x2': 1, 'skyblue-2x2': 1,
-  // 2x4 Bricks
-  'yellow-2x4': 1, 'blue-2x4': 1, 'red-2x4': 1,
-  // Custom Shapes
-  'yellow-2x4-fillet-top-both': 1, 'green-2x4-fillet-top-both': 1,
-  'green-2x4-fillet-bot-both': 1,
-  'blue-2x3-fillet-top': 2, 'white-2x3-fillet-top': 1,
-  'brown-2x2-cylinder': 1,
-  // Half Heights
-  'yellow-2x4-half': 1, 'white-2x4-half': 1, 'lightblue-2x4-half': 1, 'green-2x4-half': 1,
-  'white-2x6-half': 1,
-  // Double Heights
-  'lightblue-1x2-double': 2, 'blue-1x2-double': 2, 'yellow-1x2-double': 2
-};
-
-const inventory = { ...initialInventory };
-
-const placed    = [];
-const occ       = {};
-let   uid       = 0;
-const newId     = () => `b${uid++}`;
-
-let dragging    = false;
-let dragType    = null;
-let dragColor   = null;
-let dragRot     = 0;
-let ghostGroup  = null;
-let ghostValid  = false;
-let ghostGx     = 0, ghostGz = 0, ghostLy = 0;
-let lastMx      = 0, lastMy = 0;
-let activeCard  = null;
-
-let selectedId  = null;
-
-// ── UI GENERATOR ──────────────────────────────────────────────────────────────
-function renderSidebar() {
-  const container = document.getElementById('inventory-container');
-  container.innerHTML = '';
-
-  const grouped = {};
-  for (const key in inventory) {
-    const firstDash = key.indexOf('-');
-    const color = key.substring(0, firstDash);
-    const type = key.substring(firstDash + 1);
-    if (!grouped[type]) grouped[type] = [];
-    grouped[type].push(color);
-  }
-
-  for (const type in grouped) {
-    const colors = grouped[type];
-    const defaultColor = colors[0];
-    const { shape } = dims(type, 0);
-
-    let rStyle = 'border-radius: 3px;';
-    if (shape === 'cylinder') rStyle = 'border-radius: 10px;';
-    if (shape === 'fillet-top-both') rStyle = 'border-top-left-radius: 10px; border-top-right-radius: 10px;';
-    if (shape === 'fillet-bot-both') rStyle = 'border-bottom-left-radius: 10px; border-bottom-right-radius: 10px;';
-    if (shape === 'fillet-top-end') rStyle = 'border-top-right-radius: 10px;';
-
-    const div = document.createElement('div');
-    div.className = 'block-card';
-    div.id = `card-${type}`;
-    div.dataset.type = type;
-    div.dataset.color = defaultColor;
-
-    const optionsHtml = colors.map(c =>
-      `<option value="${c}">${c.charAt(0).toUpperCase() + c.slice(1)}</option>`
-    ).join('');
-
-    div.innerHTML = `
-      <div class="block-swatch" id="swatch-${type}" style="width: 32px; height: 16px; background: ${hexCSS(COLOR_HEX[defaultColor])}; ${rStyle}"></div>
-      <div class="block-info">
-        <select class="color-select" style="margin-bottom: 2px; width: 100%; background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 4px;">
-          ${optionsHtml}
-        </select>
-        <div class="block-name">${type}</div>
-        <div class="block-count" id="cnt-${type}">${inventory[`${defaultColor}-${type}`]} left</div>
+      <div class="callout">
+        <h4>Three main components:</h4>
+        <ol class="steps">
+          <li>An interactive website for a user to design a custom LEGO build from anywhere and send it to the robot</li>
+          <li>A computer vision pipeline to detect Duplo brick poses, colors, and sizes using a RealSense depth camera</li>
+          <li>A planning and IK node to generate robot trajectories that assemble the design brick by brick on the build plate</li>
+        </ol>
       </div>
-    `;
-
-    container.appendChild(div);
-
-    const select = div.querySelector('.color-select');
-    select.addEventListener('change', (e) => {
-      const selectedColor = e.target.value;
-      div.dataset.color = selectedColor;
-      document.getElementById(`swatch-${type}`).style.background = hexCSS(COLOR_HEX[selectedColor]);
-
-      const currentCount = inventory[`${selectedColor}-${type}`];
-      document.getElementById(`cnt-${type}`).innerText = `${currentCount} left`;
-      div.style.opacity = currentCount <= 0 ? '0.4' : '1.0';
-
-      if (currentCount > 0) {
-        clearSelection();
-        dragType = type;
-        dragColor = selectedColor;
-        dragRot = 0;
-        setStatus(`Tool: ${dragColor} ${dragType}`);
-
-        document.querySelectorAll('.block-card').forEach(c => c.style.borderColor = '#30363d');
-        div.style.borderColor = '#58a6ff';
-        if (ghostGroup) moveGhost();
-      }
-    });
-
-    select.addEventListener('mousedown', e => e.stopPropagation());
-
-    div.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      startDrag(div);
-    });
-  }
-}
-
-// ── THREE.JS ─────────────────────────────────────────────────────────────────
-const scene    = new THREE.Scene();
-scene.background = new THREE.Color(0x16213e);
-scene.fog        = new THREE.FogExp2(0x16213e, 0.018);
-
-const canvas   = document.getElementById('canvas');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
-camera.position.set(14, 18, 18);
-camera.lookAt(0, 0, 0);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping  = true;
-controls.dampingFactor  = 0.06;
-controls.maxPolarAngle  = Math.PI / 2.05;
-controls.minDistance    = 4;
-controls.maxDistance    = 60;
-controls.mouseButtons   = { LEFT: null, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE };
-
-// Lights
-scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-const sun = new THREE.DirectionalLight(0xffffff, 0.9);
-sun.position.set(14, 22, 14);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 0.1, far: 100 });
-scene.add(sun);
-const fill = new THREE.DirectionalLight(0x6688cc, 0.3);
-fill.position.set(-10, 10, -10);
-scene.add(fill);
-
-// ── BUILD PLATE ───────────────────────────────────────────────────────────────
-(function buildPlate() {
-  const plateMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32 });
-  const plate    = new THREE.Mesh(new THREE.BoxGeometry(GRID, 0.5, GRID), plateMat);
-  plate.position.y = -0.25;
-  plate.receiveShadow = true;
-  scene.add(plate);
-
-  const grid = new THREE.GridHelper(GRID, GRID, 0x1b5e20, 0x1b5e20);
-  grid.position.y = 0.001;
-  scene.add(grid);
-
-  const studGeo = new THREE.CylinderGeometry(SR, SR, SH, 8);
-  const studMat = new THREE.MeshLambertMaterial({ color: 0x33873a });
-  for (let x = 0; x < GRID; x++) for (let z = 0; z < GRID; z++) {
-    const s = new THREE.Mesh(studGeo, studMat);
-    s.position.set(gW(x), SH / 2, gW(z));
-    scene.add(s);
-  }
-})();
-
-// Invisible ground plane for raycasting
-const groundPlane = new THREE.Mesh(
-  new THREE.PlaneGeometry(200, 200),
-  new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide })
-);
-groundPlane.rotation.x = -Math.PI / 2;
-groundPlane.userData.isGround = true;
-scene.add(groundPlane);
-
-// ── CUSTOM GEOMETRY BUILDER ──────────────────────────────────────────────────
-function createBodyGeometry(shape, w, d, bodyH, rot) {
-  if (shape === 'box') return new THREE.BoxGeometry(w, bodyH, d);
-
-  if (shape === 'cylinder') {
-    const radius = Math.min(w, d) / 2;
-    return new THREE.CylinderGeometry(radius, radius, bodyH, 32);
-  }
-
-  if (shape.includes('fillet')) {
-    const isRotated = rot % 2 === 1;
-    const profileD = isRotated ? w : d;
-    const extrudeW = isRotated ? d : w;
-
-    const s = new THREE.Shape();
-
-    if (shape === 'fillet-top-end') {
-      s.moveTo(0, 0);
-      s.lineTo(profileD, 0);
-      s.lineTo(profileD, bodyH - 1);
-      s.quadraticCurveTo(profileD, bodyH, profileD - 1, bodyH);
-      s.lineTo(0, bodyH);
-      s.lineTo(0, 0);
-    }
-    else if (shape === 'fillet-top-both') {
-      s.moveTo(0, 0);
-      s.lineTo(profileD, 0);
-      s.lineTo(profileD, bodyH - 1);
-      s.quadraticCurveTo(profileD, bodyH, profileD - 1, bodyH);
-      s.lineTo(1, bodyH);
-      s.quadraticCurveTo(0, bodyH, 0, bodyH - 1);
-      s.lineTo(0, 0);
-    }
-    else if (shape === 'fillet-bot-both') {
-      s.moveTo(1, 0);
-      s.lineTo(profileD - 1, 0);
-      s.quadraticCurveTo(profileD, 0, profileD, 1);
-      s.lineTo(profileD, bodyH);
-      s.lineTo(0, bodyH);
-      s.lineTo(0, 1);
-      s.quadraticCurveTo(0, 0, 1, 0);
-    }
-
-    const geo = new THREE.ExtrudeGeometry(s, { depth: extrudeW, bevelEnabled: false });
-    geo.rotateY(Math.PI / 2);
-    geo.translate(-extrudeW / 2, -bodyH / 2, profileD / 2);
-    if (isRotated) geo.rotateY(-Math.PI / 2);
-    return geo;
-  }
-}
-
-// ── BRICK MESH FACTORY ───────────────────────────────────────────────────────
-function makeBrick(type, color, rot, { ghost = false, invalid = false } = {}) {
-  const { w, d, h, shape } = dims(type, rot);
-  const totalH = h * VU;
-  const bodyH  = totalH - SH;
-  const group  = new THREE.Group();
-
-  const baseColor = invalid ? 0xff2222 : COLOR_HEX[color];
-  const darkColor = invalid ? 0xaa1111 : COLOR_DARK[color];
-  const opacity   = ghost ? 0.52 : 1.0;
-  const trans     = ghost || invalid;
-
-  const bodyMat = new THREE.MeshLambertMaterial({ color: baseColor, transparent: trans, opacity });
-  const bodyGeo = createBodyGeometry(shape, w, d, bodyH, rot);
-  const body    = new THREE.Mesh(bodyGeo, bodyMat);
-  body.position.y  = bodyH / 2;
-  body.castShadow  = !ghost;
-  body.receiveShadow = true;
-  group.add(body);
-  group.userData.bodyMesh = body;
-
-  if (!ghost && shape === 'box') {
-    const edgeMat = new THREE.MeshLambertMaterial({ color: darkColor });
-    const edge    = new THREE.Mesh(new THREE.BoxGeometry(w - 0.06, 0.1, d - 0.06), edgeMat);
-    edge.position.y = 0.05;
-    group.add(edge);
-  }
-
-  const studMat = new THREE.MeshLambertMaterial({ color: darkColor, transparent: trans, opacity });
-  const studGeo = new THREE.CylinderGeometry(SR, SR, SH, 8);
-
-  for (let sx = 0; sx < w; sx++) {
-    for (let sz = 0; sz < d; sz++) {
-      if (hasTopStud(type, rot, sx, sz)) {
-        const s = new THREE.Mesh(studGeo, studMat);
-        s.position.set(sx - w / 2 + 0.5, bodyH + SH / 2, sz - d / 2 + 0.5);
-        s.castShadow = !ghost;
-        group.add(s);
-      }
-    }
-  }
-
-  return group;
-}
-
-// ── RAYCAST ──────────────────────────────────────────────────────────────────
-const raycaster = new THREE.Raycaster();
-const mouse2    = new THREE.Vector2();
-
-function setMouse(cx, cy) {
-  const r = renderer.domElement.getBoundingClientRect();
-  mouse2.x = ((cx - r.left) / r.width)  *  2 - 1;
-  mouse2.y = ((cy - r.top)  / r.height) * -2 + 1;
-}
-
-function highestLayerAt(gx, gz) {
-  let h = -1;
-  for (let ly = 0; ly < 50; ly++) {
-    if (occ[`${gx},${gz},${ly}`] !== undefined) h = ly; else if (ly > h + 1) break;
-  }
-  return h;
-}
-
-function placementAt(cx, cy) {
-  if (!dragType) return null;
-  setMouse(cx, cy);
-  raycaster.setFromCamera(mouse2, camera);
-
-  const bodyMeshes = placed.map(b => b.bodyMesh);
-  let hits = raycaster.intersectObjects(bodyMeshes);
-  let worldX, worldZ;
-
-  if (hits.length > 0) {
-    worldX = hits[0].point.x;
-    worldZ = hits[0].point.z;
-  } else {
-    hits = raycaster.intersectObject(groundPlane);
-    if (!hits.length) return null;
-    worldX = hits[0].point.x;
-    worldZ = hits[0].point.z;
-  }
-
-  const { w, d } = dims(dragType, dragRot);
-  const curGx = wG(worldX);
-  const curGz = wG(worldZ);
-  const ancX  = curGx - Math.floor(w / 2);
-  const ancZ  = curGz - Math.floor(d / 2);
-
-  const cs = cells(ancX, ancZ, dragType, dragRot);
-  let maxLy = -1;
-  for (const [x, z] of cs) {
-    if (x >= 0 && x < GRID && z >= 0 && z < GRID)
-      maxLy = Math.max(maxLy, highestLayerAt(x, z));
-  }
-
-  return { gx: ancX, gz: ancZ, ly: maxLy + 1 };
-}
-
-// ── VALIDATION ────────────────────────────────────────────────────────────────
-function isValid(gx, gz, type, rot, ly, excludeId = null) {
-  const cs = cells(gx, gz, type, rot);
-  const { h } = dims(type, rot);
-
-  for (const [x, z] of cs) {
-    if (x < 0 || x >= GRID || z < 0 || z >= GRID) return false;
-    for (let i = 0; i < h; i++) {
-      const key = `${x},${z},${ly + i}`;
-      if (occ[key] !== undefined && occ[key] !== excludeId) return false;
-    }
-  }
-
-  if (ly > 0) {
-    for (const [x, z] of cs) {
-      const belowId = occ[`${x},${z},${ly - 1}`];
-      if (belowId === undefined || belowId === excludeId) return false;
-      const belowBlock = placed.find(p => p.id === belowId);
-      if (belowBlock) {
-        const bsx = x - belowBlock.gx;
-        const bsz = z - belowBlock.gz;
-        if (!hasTopStud(belowBlock.type, belowBlock.rot, bsx, bsz)) return false;
-      }
-    }
-  }
-
-  return true;
-}
-
-// ── GHOST ─────────────────────────────────────────────────────────────────────
-function removeGhost() {
-  if (ghostGroup) { scene.remove(ghostGroup); ghostGroup = null; }
-}
-
-function createGhost() {
-  removeGhost();
-  ghostGroup = makeBrick(dragType, dragColor, dragRot, { ghost: true });
-  scene.add(ghostGroup);
-}
-
-function updateGhostColor(valid) {
-  const target = valid ? COLOR_HEX[dragColor] : 0xff2222;
-  ghostGroup.traverse(c => {
-    if (c.isMesh) c.material.color.setHex(target);
-  });
-}
-
-function moveGhost(cx, cy) {
-  const p = placementAt(cx, cy);
-  if (!p) { if (ghostGroup) ghostGroup.visible = false; return; }
-
-  ghostGx = p.gx; ghostGz = p.gz; ghostLy = p.ly;
-  ghostValid = isValid(p.gx, p.gz, dragType, dragRot, p.ly);
-
-  const { w, d } = dims(dragType, dragRot);
-  if (!ghostGroup) createGhost();
-  ghostGroup.visible = true;
-  ghostGroup.position.set(gW(p.gx) + (w - 1) / 2, p.ly * VU, gW(p.gz) + (d - 1) / 2);
-  updateGhostColor(ghostValid);
-}
-
-// ── PLACE BLOCK ──────────────────────────────────────────────────────────────
-function placeBlock() {
-  if (!ghostValid) { setStatus('Invalid position — block would overhang or overlap'); return; }
-  const key = `${dragColor}-${dragType}`;
-  if (inventory[key] <= 0) { setStatus('No blocks of this type left'); return; }
-
-  const { w, d, h } = dims(dragType, dragRot);
-  const id   = newId();
-  const cs   = cells(ghostGx, ghostGz, dragType, dragRot);
-  const mesh = makeBrick(dragType, dragColor, dragRot);
-
-  mesh.position.set(gW(ghostGx) + (w - 1) / 2, ghostLy * VU, gW(ghostGz) + (d - 1) / 2);
-  mesh.userData.bodyMesh.userData.blockId = id;
-  scene.add(mesh);
-
-  for (let i = 0; i < h; i++) {
-    cs.forEach(([x, z]) => { occ[`${x},${z},${ghostLy + i}`] = id; });
-  }
-
-  placed.push({ id, type: dragType, color: dragColor, gx: ghostGx, gz: ghostGz, ly: ghostLy, h, rot: dragRot, mesh, bodyMesh: mesh.userData.bodyMesh, cells: cs });
-  inventory[key]--;
-  refreshInventory();
-  setStatus(`Placed ${dragColor} ${dragType} at layer ${ghostLy}`);
-}
-
-// ── DELETE BLOCK ──────────────────────────────────────────────────────────────
-function deleteBlock(id) {
-  const idx = placed.findIndex(p => p.id === id);
-  if (idx === -1) return;
-
-  const b = placed[idx];
-  const topLy = b.ly + b.h;
-  for (const [x, z] of b.cells) {
-    if (occ[`${x},${z},${topLy}`]) {
-      setStatus('Cannot delete — blocks rest on top of this one');
-      return;
-    }
-  }
-
-  scene.remove(b.mesh);
-  for (let i = 0; i < b.h; i++) {
-    b.cells.forEach(([x, z]) => delete occ[`${x},${z},${b.ly + i}`]);
-  }
-
-  inventory[`${b.color}-${b.type}`]++;
-  placed.splice(idx, 1);
-  if (selectedId === id) clearSelection();
-  refreshInventory();
-  setStatus('Block removed');
-}
-
-// ── SELECT / HIGHLIGHT ────────────────────────────────────────────────────────
-function clearSelection() {
-  if (selectedId) {
-    const b = placed.find(p => p.id === selectedId);
-    if (b) b.mesh.traverse(c => { if (c.isMesh && c.material.emissive) c.material.emissive.setHex(0); });
-  }
-  selectedId = null;
-  document.getElementById('sel-badge').style.display = 'none';
-  setStatus('Drag a block onto the build plate to start');
-}
-
-function selectBlock(id) {
-  clearSelection();
-  selectedId = id;
-  const b = placed.find(p => p.id === id);
-  if (!b) return;
-  b.mesh.traverse(c => { if (c.isMesh && c.material.emissive) c.material.emissive.setHex(0x334455); });
-  const badge = document.getElementById('sel-badge');
-  badge.textContent = `${b.color} ${b.type} — layer ${b.ly}`;
-  badge.style.display = 'block';
-  setStatus('Delete to remove · R to rotate · Esc to deselect');
-}
-
-// ── ROTATE PLACED BLOCK ───────────────────────────────────────────────────────
-function rotatePlaced(id) {
-  const b = placed.find(p => p.id === id);
-  if (!b) return;
-  const newRot = (b.rot + 1) % 4;
-  const { w: ow, d: od } = dims(b.type, b.rot);
-  const cx = b.gx + (ow - 1) / 2;
-  const cz = b.gz + (od - 1) / 2;
-  const { w: nw, d: nd } = dims(b.type, newRot);
-  const ngx = Math.round(cx - (nw - 1) / 2);
-  const ngz = Math.round(cz - (nd - 1) / 2);
-
-  for (let i = 0; i < b.h; i++) {
-    b.cells.forEach(([x, z]) => delete occ[`${x},${z},${b.ly + i}`]);
-  }
-
-  if (isValid(ngx, ngz, b.type, newRot, b.ly)) {
-    scene.remove(b.mesh);
-
-    const newMesh = makeBrick(b.type, b.color, newRot);
-    newMesh.position.set(gW(ngx) + (nw - 1) / 2, b.ly * VU, gW(ngz) + (nd - 1) / 2);
-    newMesh.userData.bodyMesh.userData.blockId = b.id;
-    scene.add(newMesh);
-
-    b.mesh = newMesh;
-    b.bodyMesh = newMesh.userData.bodyMesh;
-    b.gx = ngx;
-    b.gz = ngz;
-    b.rot = newRot;
-    b.cells = cells(ngx, ngz, b.type, newRot);
-
-    for (let i = 0; i < b.h; i++) {
-      b.cells.forEach(([x, z]) => { occ[`${x},${z},${b.ly + i}`] = b.id; });
-    }
-
-    selectBlock(b.id);
-    setStatus('Block rotated');
-  } else {
-    for (let i = 0; i < b.h; i++) {
-      b.cells.forEach(([x, z]) => { occ[`${x},${z},${b.ly + i}`] = b.id; });
-    }
-    setStatus('Cannot rotate — space occupied or out of bounds');
-  }
-}
-
-// ── UI HELPERS ────────────────────────────────────────────────────────────────
-function setStatus(msg) { document.getElementById('status').textContent = msg; }
-
-function refreshInventory() {
-  document.querySelectorAll('.block-card').forEach(card => {
-    const type = card.dataset.type;
-    const activeColor = card.dataset.color;
-    const count = inventory[`${activeColor}-${type}`];
-
-    const countLabel = document.getElementById(`cnt-${type}`);
-    if (countLabel) countLabel.innerText = `${count} left`;
-
-    if (count <= 0) {
-      card.style.opacity = '0.4';
-      if (dragType === type && dragColor === activeColor) {
-        dragType = null;
-        card.style.borderColor = '#30363d';
-      }
-    } else {
-      card.style.opacity = '1.0';
-    }
-  });
-}
-
-function showRotBadge(deg) {
-  const el = document.getElementById('rot-badge');
-  el.textContent = `Rotation: ${deg}°`;
-  el.style.display = 'block';
-}
-
-function hideRotBadge() {
-  document.getElementById('rot-badge').style.display = 'none';
-}
-
-// ── DRAG FROM PALETTE ─────────────────────────────────────────────────────────
-function startDrag(card) {
-  const key = `${card.dataset.color}-${card.dataset.type}`;
-  if (inventory[key] <= 0) {
-    setStatus(`No more ${card.dataset.color} ${card.dataset.type} blocks left!`);
-    return;
-  }
-
-  clearSelection();
-  dragging   = true;
-  dragType   = card.dataset.type;
-  dragColor  = card.dataset.color;
-  dragRot    = 0;
-  activeCard = card;
-  card.classList.add('active-drag');
-  controls.enabled = false;
-  createGhost();
-  showRotBadge(0);
-  setStatus('Move over plate to position · R to rotate · release to place · Esc to cancel');
-
-  document.querySelectorAll('.block-card').forEach(c => c.style.borderColor = '#30363d');
-  card.style.borderColor = '#58a6ff';
-}
-
-function endDrag(place) {
-  if (place && ghostGroup && ghostGroup.visible) placeBlock();
-  dragging = false;
-  dragType = null;
-  dragColor = null;
-  if (activeCard) { activeCard.classList.remove('active-drag'); activeCard = null; }
-  controls.enabled = true;
-  removeGhost();
-  hideRotBadge();
-}
-
-// ── EVENTS ────────────────────────────────────────────────────────────────────
-document.addEventListener('mousemove', e => {
-  lastMx = e.clientX; lastMy = e.clientY;
-  if (dragging && dragType) {
-    const r   = renderer.domElement.getBoundingClientRect();
-    const oc  = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-    if (oc) moveGhost(e.clientX, e.clientY);
-    else if (ghostGroup) ghostGroup.visible = false;
-  }
-});
-
-document.addEventListener('mouseup', e => {
-  if (!dragging) return;
-  const r  = renderer.domElement.getBoundingClientRect();
-  const oc = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-  endDrag(oc);
-});
-
-renderer.domElement.addEventListener('mousedown', e => {
-  if (e.button !== 0 || dragging) return;
-  setMouse(e.clientX, e.clientY);
-  raycaster.setFromCamera(mouse2, camera);
-  const hits = raycaster.intersectObjects(placed.map(b => b.bodyMesh));
-  if (hits.length > 0) {
-    const id = hits[0].object.userData.blockId;
-    if (id === selectedId) clearSelection();
-    else selectBlock(id);
-  } else {
-    clearSelection();
-  }
-});
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'r' || e.key === 'R') {
-    if (dragging && dragType) {
-      dragRot = (dragRot + 1) % 4;
-      createGhost();
-      moveGhost(lastMx, lastMy);
-      showRotBadge(dragRot * 90);
-    } else if (selectedId) {
-      rotatePlaced(selectedId);
-    }
-    return;
-  }
-  if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
-    e.preventDefault();
-    deleteBlock(selectedId);
-    return;
-  }
-  if (e.key === 'Escape') {
-    if (dragging) endDrag(false);
-    else clearSelection();
-  }
-});
-
-// ── RESIZE ────────────────────────────────────────────────────────────────────
-function resize() {
-  const c = document.getElementById('canvas-container');
-  renderer.setSize(c.clientWidth, c.clientHeight);
-  camera.aspect = c.clientWidth / c.clientHeight;
-  camera.updateProjectionMatrix();
-}
-window.addEventListener('resize', resize);
-resize();
-
-// ── BUILD PLAN HELPER ─────────────────────────────────────────────────────────
-function buildPlan() {
-  const sortedBlocks = [...placed].sort((a, b) => {
-    const aTop = a.ly + a.h;
-    const bTop = b.ly + b.h;
-    if (aTop !== bTop) return aTop - bTop;
-    if (a.ly !== b.ly) return a.ly - b.ly;
-    if (a.gz !== b.gz) return a.gz - b.gz;
-    return a.gx - b.gx;
-  });
-
-  const maxLy = Math.max(...placed.map(b => b.ly));
-
-  let height_category = 'normal';
-
-  return {
-    metadata: {
-      timestamp: new Date().toISOString(),
-      total_blocks: placed.length,
-      layers: maxLy + 1,
-      sorting_strategy: 'top_layer_first'
-    },
-    sequence: sortedBlocks.map((b, i) => {
-      if (b.h === 1) height_category = 'half';
-      else if (b.h === 4) height_category = 'tall';
-      else height_category = 'normal';
-
-      const occupied_3d = [];
-      for (let h_offset = 0; h_offset < b.h; h_offset++) {
-        b.cells.forEach(([x, z]) => {
-          occupied_3d.push({ grid_x: x, grid_y: b.ly + h_offset, grid_z: z });
-        });
-      }
-
-      return {
-        step: i + 1,
-        block_type: b.type,
-        color: b.color,
-        grid_position: { x: b.gx, y: b.ly, z: b.gz },
-        rotation_deg: b.rot * 90,
-        height_type: height_category,
-        occupied_cells: occupied_3d
-      };
-    })
-  };
-}
-
-// ── EXPORT ────────────────────────────────────────────────────────────────────
-document.getElementById('btn-export').addEventListener('click', () => {
-  if (placed.length === 0) { setStatus('Nothing to export!'); return; }
-
-  const plan = buildPlan();
-  const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = `lego_build_plan_${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  setStatus(`Exported ${placed.length} block(s).`);
-});
-
-// ── SEND TO ROBOT ─────────────────────────────────────────────────────────────
-document.getElementById('btn-send').addEventListener('click', async () => {
-  if (placed.length === 0) { setStatus('Nothing to send!'); return; }
-
-  setStatus('Sending to robot...');
-  try {
-    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_ID}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': JSONBIN_KEY
-      },
-      body: JSON.stringify(buildPlan())
-    });
-
-    if (response.ok) {
-      setStatus(`Sent ${placed.length} block(s) to robot.`);
-    } else {
-      const err = await response.json().catch(() => ({}));
-      console.error('JSONBin error:', err);
-      setStatus('Send failed — check console.');
-    }
-  } catch (err) {
-    console.error('JSONBin fetch error:', err);
-    setStatus('Error — could not reach JSONBin.');
-  }
-});
-
-// ── RESET ─────────────────────────────────────────────────────────────────────
-document.getElementById('btn-reset').addEventListener('click', () => {
-  if (!confirm('Reset the build and return all blocks to inventory?')) return;
-  [...placed].forEach(b => { scene.remove(b.mesh); });
-  placed.length = 0;
-  Object.keys(occ).forEach(k => delete occ[k]);
-  Object.assign(inventory, initialInventory);
-  clearSelection();
-  refreshInventory();
-  setStatus('Build reset — drag a block to start');
-});
-
-// ── RENDER LOOP ───────────────────────────────────────────────────────────────
-function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
-renderSidebar();
-animate();
-refreshInventory();
-</script>
+    </div>
+
+    <div class="subsection">
+      <h3>Justification</h3>
+      <p>
+        We thought Duplo building is an interesting challenge because we wanted to focus on a more complex computer vision
+        problem. With 10 different colors and infinite rotations, we thought it would be a harder CV problem. Color filtering
+        seemed like the hardest problem as the lighting in the 106A lab was weak, reflected off many surfaces unexpectedly,
+        and some of the colors were very close to each other. The non-gridwise rotations is a hard problem as most CV models
+        align bounding boxes to a grid, but we wanted to be able to have off-axis bricks — as long as the studs were right
+        side up, the robot could build the set. We decided to use the lab 5 pick-and-place method as we thought pick-and-place
+        robots have been done many times and we didn't feel like it would be interesting to iterate on. Lastly, we thought the
+        Duplo block itself was interesting to place as they interconnect with some amount of clutch power. This would require
+        our robot to accurately determine force, otherwise it could error out if we didn't calibrate correctly. This required
+        us to design a custom gripper that can pick up and place bricks between other bricks.
+      </p>
+      <p>
+        Some real-world applications include stacking or packaging robots that need to place many different shaped and sized
+        objects correctly while also sorting for things like color. A novel gripper attachment would allow the robot to pick
+        up oddly shaped items as well. Controlling from a website may allow people to define how they would like their items
+        packed in a specific space remotely, while also being able to change how it is done quickly. There are implications
+        for workers not having to rewrite code manually for any change, but just using a website to change the final pose of
+        the item and having the robot deal with the rest.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Design ── -->
+<section id="design">
+  <div class="container">
+    <h2>Design</h2>
+
+    <div class="subsection">
+      <h3>Design Criteria</h3>
+      <p>
+        State the high-level objectives that constrain your design. What assumptions do you make about the operating environment? What does success look like? Be concrete and measurable where possible.
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h4>Key Components:</h4>
+      <ul class="bullets">
+        <li>UR7e robotic arm</li>
+        <li>Custom 3D printed stud grippers</li>
+        <li>RealSense Depth Camera</li>
+        <li>Set of Duplo Legos with Lego Baseplate</li>
+        <li>ArUco tag with 3D printed alignment jig</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <h3>Design Choices</h3>
+
+      <h4>Gripper</h4>
+      <p>
+        The first major design choice we made for the gripper was the decision to pick up the bricks by the studs.
+        In order to allow the robot to place bricks next to each other, we needed the gripper to avoid any potential
+        contact with neighboring bricks. By picking up the bricks by the studs, we effectively move the gripper away
+        from the sides of the bricks and constrain its footprint to the space above the bricks. Then came the decision
+        on whether we wanted the grippers to pinch the studs from the outside like a vice or expand from the inside
+        like an expanding mandrel. In an ideal world we'd always choose to pick up from the inside since this keeps
+        the profile of the gripper as small as possible, but it also makes the movement tolerances that much tighter.
+        Since we were detecting the starting locations of the bricks using a sometimes noisy computer vision system,
+        we decided to grip the studs like a vice clamp in order to take some weight off of the computer vision.
+      </p>
+
+      <h4>Website</h4>
+      <p>
+        The main design choice with the website was whether or not we would even do a website. Back when we were first
+        conceptualizing this idea we knew that we wanted the robot to take some sort of input that would result in it
+        replicating said input, but there are many ways to do that. One idea that came up often when talking to our peers
+        was pre-building something that the robot would scan then replicate. So why did we choose the website? While
+        having to scan an existing build and replicate the build would probably be harder to implement than the website
+        and thus arguably allowing us to showcase our skills more, we still wanted it to have more real-world use case.
+        In the real world, it is becoming less and less common for engineers to "wing" a project, then replicate it if it
+        turned out well. In the real world, most engineers would first design large portions of projects in some software
+        first before manufacturing. This is the experience we wanted to replicate — for someone to be able to "CAD" a
+        Lego build before sending it to the robot for it to manufacture their masterpiece.
+      </p>
+
+      <h4>Detection Node</h4>
+      <p>
+        Explain your design decision for this component. What alternatives did you consider? Why did you select this approach? What are its tradeoffs in your context?
+      </p>
+
+      <h4>Planning and Execution Node</h4>
+      <p>
+        Explain your design decision for this component. What alternatives did you consider? Why did you select this approach? What are its tradeoffs in your context?
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Implementation ── -->
+<section id="implementation">
+  <div class="container">
+    <h2>Implementation</h2>
+
+    <div class="subsection">
+      <h3>Hardware</h3>
+      <p>
+        Describe your hardware setup. What robot, sensor, or custom device did you use? Explain any significant fabrication or integration work. Highlight design decisions and their rationale.
+      </p>
+
+      <div class="figure-grid">
+        <figure class="figure">
+          <img src="images/GripperCAD.png" alt="Gripper CAD model" />
+          <figcaption>Gripper CAD</figcaption>
+        </figure>
+        <figure class="figure">
+          <img src="images/GripperWitheLego.jpg" alt="Gripper holding a Duplo brick" />
+          <figcaption>Gripper with brick</figcaption>
+        </figure>
+        <figure class="figure">
+          <div class="figure-placeholder">
+            <span>IMAGE COMING SOON</span>
+            <span>Placement clearance diagram</span>
+          </div>
+          <figcaption>Gripper clearance vs. neighboring brick</figcaption>
+        </figure>
+      </div>
+
+      <p><em>Describe any issues or roadblocks you encountered with your hardware and how you addressed them. For example, did you iterate on a design? Did you switch materials or components?</em></p>
+    </div>
+
+    <div class="subsection">
+      <h3>Module 1 — Interactive Website and Slicing</h3>
+      <p>
+        The website effectively functions as our project's user interface. Through the website, the user builds their
+        Lego set and then just sends it to the robot, which then builds their set brick for brick. To the user,
+        everything else is a black box. To us, it is the beginning of a long series of steps to get the user's Lego set
+        into the real world. After the user clicks the "Send to Robot" button, the website slices the build, not
+        dissimilar to how slicing software works for a 3D print. The slicer looks at what the user has built and orders
+        each brick by how high above the build plate its studs will be. Then it orders them from left to right, back to
+        front, before sending the sequence to the robot as a JSON file. The brick type, color, location, and orientation
+        are all encoded in the JSON file so the robot knows exactly which brick to pick up, in which order, and where to
+        place it on the build plate.
+      </p>
+
+      <figure class="figure">
+        <video controls>
+          <source src="Videos/Website_vid.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        <figcaption>Interactive builder demo — design a build and send it to the robot</figcaption>
+      </figure>
+
+      <p><em>
+        While the website was a core portion of the functionality of our project, we didn't put as many hours into it
+        compared to the other modules. The core purpose of this project was still to exercise and further our knowledge
+        in ROS 2 and robotics engineering, so making the website as water-tight as possible wasn't high on our list of
+        priorities. As such, once the website was capable of keeping track of and placing every type of brick available
+        to us and correctly exporting an ordered list of bricks for the robot to read, we left it as it was. If you go
+        poke around the builder you might notice some... peculiar behaviour from some of the bricks, especially when you
+        try to rotate some of the funkier shapes.
+      </em></p>
+    </div>
+
+    <div class="subsection">
+      <h3>Module 2 — Brick Detection and Pose Estimation</h3>
+      <p>
+        Describe the second major software module. Explain the algorithm, any assumptions it relies on, and how you validated its outputs.
+      </p>
+
+      <div class="figure-grid">
+        <figure class="figure">
+          <img src="images/fullPoints.png" alt="Full scene point cloud" />
+          <figcaption>Full scene point cloud</figcaption>
+        </figure>
+        <figure class="figure">
+          <img src="images/filteredPoints.png" alt="Isolated brick point cloud" />
+          <figcaption>Isolated brick point cloud</figcaption>
+        </figure>
+        <figure class="figure">
+          <img src="images/poses.png" alt="Point cloud with detected poses" />
+          <figcaption>Detected brick poses</figcaption>
+        </figure>
+      </div>
+
+      <p>
+        You may also want to describe any alternative approaches you considered and why you didn't pursue them (e.g. off-the-shelf models, different sensor modalities).
+      </p>
+      <p><em>Explain any interesting challenges or obstacles, briefly describe what didn't work and why.</em></p>
+    </div>
+
+    <div class="subsection">
+      <h3>Module 3 — Path Planning and Inverse Kinematics</h3>
+      <p>
+        Describe the third major software module. How does it use the outputs of the previous modules? What ROS nodes, APIs, or frameworks does it rely on?
+      </p>
+      <p><em>Explain any interesting challenges or obstacles, briefly describe what didn't work and why.</em></p>
+    </div>
+
+    <div class="subsection">
+      <h3>System Pipeline</h3>
+      <p>With each module developed, the end-to-end pipeline works as follows:</p>
+
+      <ol class="steps">
+        <li><strong>Receive New Build:</strong> The planning node polls JSONBin for the latest build plan — a JSON array of bricks ordered by the website's slicer.</li>
+        <li><strong>Plan Build Order:</strong> The pre-sorted sequence is validated and loaded into memory. Bricks are already ordered bottom-up, left-to-right, back-to-front by the website slicer, so no re-sorting is needed on the robot side.</li>
+        <li><strong>Scan ArUco Tag:</strong> The ArUco node detects the alignment marker on the baseplate jig, averages 30 pose samples, and publishes a locked <code>baseplate_frame</code> TF into the ROS 2 transform tree — establishing a fixed coordinate frame for the build area.</li>
+        <li><strong>Scan For Next Brick:</strong> The brick detector node captures a RealSense depth frame, segments the point cloud to isolate the target brick by color and shape, and estimates its position and yaw relative to <code>base_link</code>.</li>
+        <li><strong>Pick Up Brick:</strong> The IK node computes a pre-grasp approach trajectory, descends, closes the gripper around the brick studs in a vice-clamp grip, then lifts to a safe carry height.</li>
+        <li><strong>Place Brick onto Build Plate:</strong> Using the <code>baseplate_frame</code> TF and the current step's grid position and rotation from the build plan, the IK node computes the target placement pose and deposits the brick onto the plate.</li>
+        <li><strong>Repeat:</strong> Advance to the next brick in the sequence and return to Step 4 until all bricks are placed.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ── Results ── -->
+<section id="results">
+  <div class="container">
+    <h2>Results</h2>
+    <p>
+      Summarize your experimental results. Did the system achieve its goals? Under what conditions did it succeed or fail? Use quantitative metrics where possible.
+    </p>
+
+    <figure class="figure">
+      <div class="figure-placeholder" style="min-height: 260px;">
+        <span>DEMO VIDEO COMING SOON</span>
+        <span>Host on YouTube and embed here</span>
+      </div>
+      <figcaption>Full robot demo run</figcaption>
+    </figure>
+
+    <p>
+      Discuss any representative examples, edge cases, or failure modes. Include images, charts, or tables to support your claims. If your results were mixed, be honest about what worked and what didn't.
+    </p>
+  </div>
+</section>
+
+<!-- ── Conclusion ── -->
+<section id="conclusion">
+  <div class="container">
+    <h2>Conclusion</h2>
+
+    <div class="subsection">
+      <h3>Challenges Encountered</h3>
+      <ul class="bullets">
+        <li><strong>Challenge 1:</strong> Describe the first major challenge you faced during the project.</li>
+        <li><strong>Challenge 2:</strong> Describe a perception or calibration issue and how you addressed it.</li>
+        <li><strong>Challenge 3:</strong> Describe a hardware failure or unexpected system behavior.</li>
+        <li><strong>Challenge 4:</strong> Describe a planning or control issue (e.g. solver failures, timing issues).</li>
+        <li><strong>Challenge 5:</strong> Describe any integration challenge — getting components to work together.</li>
+      </ul>
+      <p>
+        Summarize what you learned from this project. What aspects of engineering or research were most illuminating? Reflect on the experience.
+      </p>
+    </div>
+
+    <div class="subsection">
+      <h3>Future Improvements</h3>
+      <ul class="checks">
+        <li>Describe one improvement that would directly address a current limitation of your system.</li>
+        <li>Describe an improvement to your perception or sensing pipeline.</li>
+        <li>Describe a hardware or actuator improvement that would increase reliability.</li>
+        <li>Describe a more ambitious extension that would significantly expand the scope of the project.</li>
+        <li>Describe a longer-term research direction that this project opens up.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ── Team ── -->
+<section id="team">
+  <div class="container">
+    <h2>Team</h2>
+    <div class="team-grid">
+
+      <div class="team-card">
+        <div class="member-name">Scott Schuster</div>
+        <p class="member-bio">4th-year mechanical engineering undergrad focusing on electric powertrains and thermals.</p>
+        <div class="member-role">ROS 2 Integration · Launch File · Perception Node · Perception Tuning</div>
+      </div>
+
+      <div class="team-card">
+        <div class="member-name">Nicholas Gellerman</div>
+        <p class="member-bio">Add your bio here.</p>
+        <div class="member-role">Add your role here</div>
+      </div>
+
+      <div class="team-card">
+        <div class="member-name">Braden Wang</div>
+        <p class="member-bio">Add your bio here.</p>
+        <div class="member-role">Add your role here</div>
+      </div>
+
+      <div class="team-card">
+        <div class="member-name">Joe Mattson</div>
+        <p class="member-bio">Add your bio here.</p>
+        <div class="member-role">Add your role here</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Interactive Builder ── -->
+<section id="builder">
+  <div class="container">
+    <h2>Interactive Builder</h2>
+    <p>
+      Design your own Duplo build below, then click <strong>Send to Robot</strong> to queue it for assembly in the 106A lab.
+      Use <strong>Export Build Plan</strong> to download the JSON sequence locally.
+    </p>
+    <iframe
+      src="builder.html"
+      class="builder-frame"
+      title="Interactive LEGO Builder"
+    ></iframe>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <strong>[LEGO BOT]</strong><br />
+  EECS 106A — Team 6 — Spring 2026<br />
+  UC Berkeley
+</footer>
+
 </body>
 </html>
