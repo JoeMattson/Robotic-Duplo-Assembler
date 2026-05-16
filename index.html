@@ -360,7 +360,7 @@
     </svg>
   </div>
   <header class="hero">
-    <h1>[LEGO BOT] — a robot that assembles Legos!</h1>
+    <h1>[LEGO BOT] — A Robotic Arm Duplo Assembler!</h1>
     <p class="hero-subtitle">Team 6 — EECS 106A — UC Berkeley — Spring 2026</p>
     <p class="hero-subtitle">Nicholas Gellerman &amp; Braden Wang &amp; Scott Schuster &amp; Joe Mattson</p>
   </header>
@@ -372,12 +372,10 @@
     <h2>Introduction</h2>
 
     <div class="subsection">
-      <h3>Goals</h3>
+      <h3>Project Goals</h3>
       <p>
-        The goal of our project was to be able to build any Duplo set using the blocks in the Brick Box. We wanted bricks
-        to be picked up from anywhere on the table and placed correctly on the build plate. We wanted to distinguish between
-        colors and brick size. To make this more interesting, we wanted to add in a website for a user to design sets with
-        from anywhere. Then they could submit a build and the robot would be able to build it in the 106A lab using the UR7e robot.
+        Our aim for this project was to be able to build any Duplo structure using the included bricks in our set. We wanted the ability to pick up bricks from anywhere on the table and then place them correctly on the build plate. To make this happen, we needed to be able to differentiate between brick shapes and colors. To add in an element of user interaction and to make this more interesting, we addtionaly wanted to add in a website to enable users to design sets with
+        from anywhere. With this website, they could submit a build and the robot would be able to build it in the 106A lab using the UR7e robot.
       </p>
 
       <div class="callout">
@@ -391,10 +389,9 @@
     </div>
 
     <div class="subsection">
-      <h3>Justification</h3>
+      <h3>Why a Duplo Assembler?</h3>
       <p>
-        We thought Duplo building is an interesting challenge because we wanted to focus on a more complex computer vision
-        problem. With 10 different colors and infinite rotations, we thought it would be a harder CV problem. Color filtering
+        With a shared love of Legos, we found Duplo building to be an interesting balence between simplicity and complexity. Because we wanted to focus on a more complex computer vision problem, Duplos with their unique shapes and colors presented a challenging scenario, while offering a larger platform than standard Lego bricks. With 10 different colors and infinite rotations, we knew computer vision would be a challenge. Color filtering
         seemed like the hardest problem as the lighting in the 106A lab was weak, reflected off many surfaces unexpectedly,
         and some of the colors were very close to each other. The non-gridwise rotations is a hard problem as most CV models
         align bounding boxes to a grid, but we wanted to be able to have off-axis bricks — as long as the studs were right
@@ -424,9 +421,10 @@
     <div class="subsection">
       <h3>Design Criteria</h3>
       <p>
-        Our system assumes bricks are placed stud-side up anywhere on a flat table within view of the RealSense camera,
-        and that the ArUco marker is visible at startup. Success means the robot correctly picks up and places each brick
-        in the user's design without knocking over neighbors or misaligning on the build plate. The system must
+        For consistency, our system assumes bricks are placed stud-side up anywhere on a flat table, within the range of our robotic arm.
+        This allowed any bricks or markers to be always be within the field of view of the RealSense camera (based on the robot limits).
+        We also assumed that the ArUco marker would be visible within this range. Success then means the robot can correctly pick up and place each brick,
+        following the user's design without knocking over neighbors or misaligning on the build plate. The system must also
         distinguish 10 brick colors under the weak, inconsistent lighting of the 106A lab, detect arbitrary yaw
         orientations (not just grid-aligned), and position bricks accurately enough to engage Duplo clutch power.
       </p>
@@ -700,8 +698,8 @@
 
       <div class="team-card">
         <div class="member-name">Joe Mattson</div>
-        <p class="member-bio">Add your bio here.</p>
-        <div class="member-role">Add your role here</div>
+        <p class="member-bio">4th-year mechanical engineering undergrad focusing on electric powertrains and fea modeling</p>
+        <div class="member-role">ROS 2 Integration · Brick Handling · Computer Vision · Web Development</div>
       </div>
 
     </div>
