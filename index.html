@@ -424,7 +424,11 @@
     <div class="subsection">
       <h3>Design Criteria</h3>
       <p>
-        State the high-level objectives that constrain your design. What assumptions do you make about the operating environment? What does success look like? Be concrete and measurable where possible.
+        Our system assumes bricks are placed stud-side up anywhere on a flat table within view of the RealSense camera,
+        and that the ArUco marker is visible at startup. Success means the robot correctly picks up and places each brick
+        in the user's design without knocking over neighbors or misaligning on the build plate. The system must
+        distinguish 10 brick colors under the weak, inconsistent lighting of the 106A lab, detect arbitrary yaw
+        orientations (not just grid-aligned), and position bricks accurately enough to engage Duplo clutch power.
       </p>
     </div>
 
@@ -471,7 +475,24 @@
 
       <h4>Detection Node</h4>
       <p>
-        Explain your design decision for this component. What alternatives did you consider? Why did you select this approach? What are its tradeoffs in your context?
+        The core challenge in our detection node was handling the 106A lab's weak and uneven lighting across 10
+        similar-looking colors. We first tried depth-only detection, but depth alone cannot distinguish brick colors
+        or handle cases where bricks are stacked — height ambiguity made it unreliable. We then tried 2D color blob
+        detection on the RGB image, which was fast but could not recover brick orientation or handle partial
+        occlusions, and was highly sensitive to shadows and reflections on the brick surfaces.
+      </p>
+      <p>
+        We ultimately chose to do classification on 3D point cloud clusters colored in LAB color space. LAB separates
+        luminance from the color channels, which made our color ranges significantly more robust to the harsh
+        reflections and inconsistent shadows in the lab compared to HSV. To localize the build plate we use an ArUco
+        marker as the primary method, running 6 detection attempts with different CLAHE preprocessing and threshold
+        parameters to tolerate poor lighting conditions. If ArUco fails, we fall back to HSV segmentation of the green
+        baseplate itself. Once the baseplate frame is locked, we transform the RealSense point cloud into baseplate
+        coordinates and filter it to only the XY footprint of the build area — eliminating the robot arm and
+        surrounding clutter before clustering. DBSCAN then separates individual bricks without requiring us to specify
+        how many are present. For each cluster, shape and yaw are estimated via PCA on the XY extent of the points,
+        which naturally handles off-axis orientations. Height is estimated from the 90th-percentile Z value and used
+        to classify bricks as half, normal, or tall.
       </p>
 
       <h4>Planning and Execution Node</h4>
